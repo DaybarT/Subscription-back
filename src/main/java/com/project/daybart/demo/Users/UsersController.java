@@ -1,5 +1,6 @@
 package com.project.daybart.demo.Users;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,23 +21,23 @@ public class UsersController {
     private final UsersService usersService;
 
     @PostMapping
-    public void createUser(@RequestBody Users users) {
-        usersService.createUser(users);
+    public ResponseEntity<String> createUser(@RequestBody Users users) {
+        return usersService.createUser(users);
     }
 
     @DeleteMapping
-    public void deleteUser(@RequestHeader Users users) {
-        usersService.deleteUser(users);
+    public ResponseEntity<String> deleteUser(@RequestHeader Users users) {
+        return usersService.deleteUser(users);
     }
 
     @PatchMapping
-    public void updateUser(@RequestBody Users users) {
-        usersService.updateUserByID(users);
+    public ResponseEntity<String> updateUser(@RequestBody Users users) {
+        return usersService.updateUserByID(users);
     }
 
     @GetMapping
-    public Users searchUser(@RequestParam String username) {
-        return usersService.findByUsername(username).orElse(null);
+    public ResponseEntity<Users> searchUser(@RequestParam String username) {
+        return usersService.findByUsername(username);
     }
 
 }

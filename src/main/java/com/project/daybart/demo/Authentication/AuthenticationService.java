@@ -1,12 +1,16 @@
 package com.project.daybart.demo.Authentication;
 
+import java.security.Key;
 import java.util.Date;
 import java.util.Optional;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.project.daybart.demo.Users.Users;
 import lombok.RequiredArgsConstructor;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -23,17 +27,44 @@ public class AuthenticationService {
     @Value("${jwt.expirationTime}")
     private long expirationTime;
 
-    public String login(Users user) {
+    public ResponseEntity<String> login(Users user) {
         try {
             Optional<Users> existingUser = authRepo.findByEmailAndPassword(user.getEmail(), user.getPassword());
 
             if (existingUser.isPresent()) {
-                return generateAccessToken(existingUser.get());
+                String accessToken = generateAccessToken(existingUser.get());
+                return ResponseEntity.ok(accessToken);
             } else {
-                throw new Exception("Email o contraseña incorrectos.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email o contraseña incorrectos.");
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error al autenticar: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al autenticar: " + e.getMessage());
+        }
+    }
+
+    private ResponseEntity<Object> verify(String token) { //hay que usarlo
+        try {
+            Key key = Keys.hmacShaKeyFor(secretKey.getBytes());
+            Claims jws = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            Object[] payload = { jws.getSubject(), jws };
+
+            Date expirationDate = jws.getExpiration();
+            Date now = new Date();
+
+            if (expirationDate != null && expirationDate.before(now)) {
+                return new ResponseEntity<>("Token expired", HttpStatus.UNAUTHORIZED);
+            } else {
+                return new ResponseEntity<>(payload, HttpStatus.OK);
+            }
+        } catch (Exception e) {
+            // El token no es válido
+            return new ResponseEntity<>("Token invalid", HttpStatus.NOT_ACCEPTABLE);
         }
     }
 
